@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drag and Drop Example</title>
+  <style>
+    main {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      user-select: none;
+    }
+    .drop-target {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      width: 10em;
+      height: 10em;
+      border: solid 1px black;
+      margin: 1em;
+    }
+    #drag-target {
+      width: 5em;
+      height: 5em;
+      border: solid 1px black;
+      background-color: whitesmoke;
+    }
+    #drag-target.dragging {
+      background-color: #ffeeee;
+    }
+  </style>
+</head>
+<body></body>
+</html>

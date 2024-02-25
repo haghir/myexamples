@@ -1,0 +1,10 @@
+AM_YFLAGS = -d
+bin_PROGRAMS = foo
+foo_SOURCES  = foo-parser.y
+foo_SOURCES += foo-lexer.l
+foo_SOURCES += foo-list.h
+foo_SOURCES += foo-list.c
+foo_SOURCES += main.c
+BUILT_SOURCES  = foo-parser.h
+BUILT_SOURCES += foo-parser.c
+BUILT_SOURCES += foo-lexer.c

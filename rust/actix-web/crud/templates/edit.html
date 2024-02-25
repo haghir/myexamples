@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meat charset="UTF-8"/>
+  <title>Edit</title>
+</head>
+<body>
+  <h1>Edit the record ID = {{ record.id }}</h1>
+  <form method="POST" action="/edit">
+    <input type="hidden" name="id" value="{{ record.id }}"/>
+    <p>
+      <label for="text">Text:</label>
+      <input id="text" name="text" type="text" value="{{ record.text }}"/>
+    </p>
+    <input type="submit"/>
+  </form>
+</body>
+</html>

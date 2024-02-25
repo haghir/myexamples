@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Example</title>
+  </head>
+  <body>
+    <form action="/" method="POST" enctype="multipart/form-data">
+      <p id="files">
+        <input type="file" name="filename[0]"/>
+      </p>
+      <button type="button" id="add">Add</button>
+      <button type="submit">Submit</button>
+    </form>
+    {% for name in names %}
+    <p>{{ hashes[loop.index0] }} *{{ name }}</p>
+    {% endfor %}
+    <script>
+     window.onload = () => {
+       const nextId = (() => {
+         let i = 0;
+         return () => ++i;
+       })();
+
+       const container = document.querySelector("#files");
+       const button = document.querySelector("#add");
+       button.addEventListener("click", () => {
+         const br = document.createElement("br");
+         const input = document.createElement("input");
+         const id = nextId();
+         input.setAttribute("type", "file");
+         input.setAttribute("name", `filename[${id}]`);
+         container.appendChild(br);
+         container.appendChild(input);
+       });
+     };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+1. Start the mongod with authorization.
+
+  Add the following block to /etc/mongod.conf and restart mongod.
+
+  ~~~
+  security:
+    authorization: enabled
+  ~~~
+
+2. Register the first superuser to the database.
+
+  Type the following commands:
+
+  ~~~
+  $ mongo
+  > use admin
+  switched to db admin
+  > db.createUser({user:"mongo", pwd:"mongo", roles:["root"]})
+  Successfully added user: { "user" : "mongo", "roles" : [ "root" ] }
+  ~~~
+
+  The registered user "mongo" can be used only in the database "admin"
+  because the user "admin" registered only to this database.
+
+3. Login as the registered superuser "mongo".
+
+  Type the following command and password:
+
+  ~~~
+  $ mongo -u mongo
+  MongoDB shell version v4.2.8
+  Enter password: 
+  ~~~
+
+  or
+
+  ~~~
+  $ mongo
+  > use admin
+  switched to db admin
+  > db.auth("mongo", "mongo")
+  1
+  ~~~
+
+4. Create new database and add its owner.
+
+  ~~~
+  $ mongo -u mongo
+  > use mydb
+  switched to db mydb
+  > db.createUser({user:"mydb", pwd:"mydb", roles:["dbOwner"]})
+  Successfully added user: { "user" : "mydb", "roles" : [ "dbOwner" ] }
+  ~~~
+
+  for more roles, see:
+    https://docs.mongodb.com/manual/reference/built-in-roles/
+
+5. Add an user given the role "readWrite" to the database "mydb".
+
+  ~~~
+  $ mongo -u mydb mydb
+  > db.createUser({user:"mydbuser", pwd:"mydbuser", roles:["readWrite"]})
+  Successfully added user: { "user" : "mydbuser", "roles" : [ "readWrite" ] }
+  ~~~

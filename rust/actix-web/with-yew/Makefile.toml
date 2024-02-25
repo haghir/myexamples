@@ -1,0 +1,20 @@
+[config]
+default_to_workspace = false
+
+[env.development]
+RELEASE_FLAG = ""
+
+[env.production]
+RELEASE_FLAG = "--release"
+
+[tasks.build]
+dependencies = ["backend"]
+
+[tasks.backend]
+command = "cargo"
+args = ["build", "@@remove-empty(RELEASE_FLAG)", "--bin", "backend"]
+dependencies = ["frontend"]
+
+[tasks.frontend]
+command = "trunk"
+args = ["build", "@@remove-empty(RELEASE_FLAG)", "frontend/index.html"]

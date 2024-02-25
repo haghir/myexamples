@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="jquery-ui.css">
+  <title>jQuery UI Sortable Example</title>
+</head>
+<body>
+  <ul id="sortable">
+    <li class="ui-state-default">Foo</li>
+    <li class="ui-state-default">Bar</li>
+    <li class="ui-state-default">Baz</li>
+    <li class="ui-state-default">Qux</li>
+    <li class="ui-state-default">Quux</li>
+    <li class="ui-state-default">Corge</li>
+    <li class="ui-state-default">Grault</li>
+    <li class="ui-state-default">Garply</li>
+    <li class="ui-state-default">Waldo</li>
+    <li class="ui-state-default">Fred</li>
+  </ul>
+  <script src="jquery-3.6.1.slim.js"></script>
+  <script src="jquery-ui.js"></script>
+  <script src="jquery-ui.structure.js"></script>
+  <script>
+  window.onload = () => {
+    $("#sortable").sortable();
+  };
+  </script>
+</body>
+</html>

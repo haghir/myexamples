@@ -1,0 +1,3 @@
+message1 = "The quick brown fox jumps over the lazy dog."
+message2 = "The quick brown {fox} jumps over the lazy {dog}."
+message3 = "The {quick} brown fox jumps over the {lazy} dog."

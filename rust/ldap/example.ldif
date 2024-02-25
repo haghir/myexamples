@@ -1,0 +1,24 @@
+dn: ou=people,dc=example,dc=com
+objectClass: organizationalUnit
+ou: people
+
+dn: cn=foo,ou=people,dc=example,dc=com
+objectClass: inetOrgPerson
+cn: foo
+sn: Foo
+givenName: FOO
+employeeNumber: 1000
+
+dn: cn=bar,ou=people,dc=example,dc=com
+objectClass: inetOrgPerson
+cn: bar
+sn: Bar
+givenName: BAR
+employeeNumber: 1001
+
+dn: cn=baz,ou=people,dc=example,dc=com
+objectClass: inetOrgPerson
+cn: baz
+sn: Baz
+givenName: BAZ
+employeeNumber: 1002

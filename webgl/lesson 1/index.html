@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Lesson 1</title>
+</head>
+<body>
+  <canvas id="c" width="320" height="240"></canvas>
+  <script id="vertex-shader-2d" type="notjs">
+  attribute vec4 a_position;
+
+  void main() {
+      gl_Position = a_position;
+  }
+  </script>
+  <script id="fragment-shader-2d" type="notjs">
+  precision mediump float;
+
+  void main() {
+      gl_FragColor = vec4(1, 0, 0.5, 0.5);
+  }
+  </script>
+  <script src="./main.js"></script>
+</body>
+</html>

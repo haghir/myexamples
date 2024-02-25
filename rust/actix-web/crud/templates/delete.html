@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meat charset="UTF-8"/>
+  <title>Delete</title>
+</head>
+<body>
+  <h1>Delete the record ID = {{ record.id }}</h1>
+  <form method="POST" action="/delete">
+    <input type="hidden" name="id" value="{{ record.id }}"/>
+    <p>Are you sure you want to delete the record?</p>
+    <input type="submit" value="Delete"/>
+  </form>
+</body>
+</html>

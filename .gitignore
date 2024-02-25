@@ -1,0 +1,10 @@
+# Temporary files
+*~
+.#*
+\#*#
+*.orig
+
+# GNU Global
+GPATH
+GRTAGS
+GTAGS

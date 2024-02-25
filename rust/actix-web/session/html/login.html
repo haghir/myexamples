@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <style>
+    label {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+{% if has_message -%}
+<p>{{ message }}</p>
+{% endif -%}
+<p>User ID: {{ user_id }}</p>
+<form action="/login" method="POST">
+  <div>
+    <label for="userId">User ID</label>
+    <input id="userId" name="user_id" type="text"/>
+  </div>
+  <div>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password"/>
+  </div>
+  <div>
+    <input type="submit"/>
+  </div>
+</form>
+</body>
+</html>

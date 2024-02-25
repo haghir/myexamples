@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Lesson 3</title>
+  <link href="../common/jquery-ui-1.12.1.custom/jquery-ui.min.css" rel="stylesheet"/>
+  <link href="../common/jquery-ui-1.12.1.custom/jquery-ui.theme.min.css" rel="stylesheet"/>
+  <style>
+    #sliders {
+      display: inline-block;
+      margin-left: 2em;
+      vertical-align: top;
+    }
+    .slider {
+      margin-bottom: 1em;
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="500" height="500"></canvas>
+  <div id="sliders">
+    <div id="sslider" class="slider"></div>
+    <div id="pslider" class="slider"></div>
+    <div id="xslider" class="slider"></div>
+    <div id="yslider" class="slider"></div>
+    <div id="zslider" class="slider"></div>
+    <div id="hslider" class="slider"></div>
+    <div id="vslider" class="slider"></div>
+  </div>
+  <script id="vertex-shader-3d" type="x-shader/x-vertex">
+  attribute vec3 a_position;
+  uniform mat4 u_transform;
+  uniform float u_pointSize;
+  varying vec4 v_color;
+
+  void main() {
+    gl_Position = u_transform * vec4(a_position, 1.0);
+    gl_PointSize = u_pointSize;
+    v_color = vec4(a_position + 1.0, gl_Position.z + 1.0) * 0.5;
+  }
+  </script>
+  <script id="fragment-shader-3d" type="x-shader/x-fragment">
+  precision mediump float;
+  varying vec4 v_color;
+
+  void main() {
+      gl_FragColor = v_color;
+  }
+  </script>
+  <script src="../common/jquery-3.6.0.min.js"></script>
+  <script src="../common/jquery-ui-1.12.1.custom/jquery-ui.min.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>
