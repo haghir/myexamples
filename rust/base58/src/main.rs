@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 const CHR: &'static [u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 fn main() {
@@ -40,7 +42,7 @@ fn to_base58(data: &Vec<u8>) -> String {
         h = j;
     }
 
-    let mut ret = (0..zcount).map(|_| "1").collect::<Vec<&str>>().concat();
+    let mut ret = (0..zcount).map(|_| "1").join("");
     for i in (dlen - h)..dlen {
         ret.push(CHR[buf[dlen - i - 1] as usize] as char);
     }
