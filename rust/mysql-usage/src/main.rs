@@ -1,29 +1,33 @@
+mod wrapper;
+mod person;
+
 use sha2::{Sha256, Digest};
 use mysql_async::*;
 use mysql_async::prelude::*;
-use log::info;
 use time::PrimitiveDateTime;
-use futures_util::StreamExt;
+
+use crate::person::{FindPeople};
+use crate::wrapper::SelectQuery;
 
 #[derive(Debug)]
 struct Person {
-    id: u64,
+    _id: u64,
     name: String,
     age: Option<i32>,
     hash: Option<String>,
-    available: bool,
-    created_at: Option<PrimitiveDateTime>,
+    _available: bool,
+    _created_at: Option<PrimitiveDateTime>,
 }
 
 impl Person {
     fn new(name: &str, age: Option<i32>) -> Self {
         Person {
-            id: 0,
+            _id: 0,
             name: name.to_string(),
             age,
             hash: None,
-            available: true,
-            created_at: None,
+            _available: true,
+            _created_at: None,
         }
     }
 }
@@ -31,27 +35,13 @@ impl Person {
 impl FromRow for Person {
     fn from_row_opt(mut row: Row) -> core::result::Result<Self, FromRowError> {
         Ok(Person {
-            id: row.take(0).unwrap(),
+            _id: row.take(0).unwrap(),
             name: row.take(1).unwrap(),
             age: row.take(2).unwrap(),
             hash: row.take(3).unwrap(),
-            available: row.take(4).unwrap(),
-            created_at: row.take(5),
+            _available: row.take(4).unwrap(),
+            _created_at: row.take(5),
         })
-    }
-}
-
-trait Select {
-    async fn select<'a>(&'a mut self) -> Result<QueryResult<'a, 'static, BinaryProtocol>>;
-}
-
-impl Select for Conn {
-    async fn select<'a>(&'a mut self) -> Result<QueryResult<'a, 'static, BinaryProtocol>> {
-        let sql = "SELECT id, name, age, hash, available, created_at FROM people WHERE name LIKE :name";
-        let query = sql.with(params! {
-            "name" => "%i%",
-        });
-        query.run(self).await
     }
 }
 
@@ -102,11 +92,14 @@ async fn main() -> Result<()> {
         .batch(&mut conn)
         .await?;
 
-    let mut result = conn.select().await?;
-    if let Some(mut stream) = result.stream::<Person>().await? {
-        while let Some(person) = stream.next().await {
-            let person = person?;
-            println!("{:?}", person);
+    let query = FindPeople {
+        name: "%i%".to_string(),
+    };
+    let mut result = query.select(&mut conn).await?;
+    if let Some(mut stream) = result.stream().await? {
+        while let Some(found) = stream.next().await {
+            let found = found?;
+            println!("{:?}", found);
         }
     }
 
