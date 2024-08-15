@@ -21,34 +21,24 @@ impl Into<Value> for Gender {
     }
 }
 
-struct GenderIr {
-    gender: i64
-}
+impl TryFrom<Value> for Gender {
+    type Error = FromValueError;
 
-impl ConvIr<Gender> for GenderIr {
-    fn new(v: Value) -> std::result::Result<Self, FromValueError> {
-        match v {
-            Value::Int(n) => Ok(GenderIr{ gender: n }),
-            _ => Err(FromValueError(v))
+    fn try_from(value: Value) -> std::result::Result<Self, Self::Error> {
+        match value {
+            Value::Int(n) => match n {
+                0 => Ok(Gender::Male),
+                1 => Ok(Gender::Female),
+                2 => Ok(Gender::Others),
+                _ => Err(FromValueError(value))
+            }
+            _ => Err(FromValueError(value))
         }
-    }
-
-    fn commit(self) -> Gender {
-        match self.gender {
-            0 => Gender::Male,
-            1 => Gender::Female,
-            2 => Gender::Others,
-            _ => panic!("Unexpected value for Gender")
-        }
-    }
-
-    fn rollback(self) -> Value {
-        Value::Int(self.gender)
     }
 }
 
 impl FromValue for Gender {
-    type Intermediate = GenderIr;
+    type Intermediate = Gender;
 }
 
 #[derive(Debug)]
