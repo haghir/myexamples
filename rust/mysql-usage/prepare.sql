@@ -5,5 +5,6 @@ CREATE TABLE `people` (
 ,   `age`        INTEGER
 ,   `hash`       CHAR(64)
 ,   `available`  BOOLEAN NOT NULL DEFAULT TRUE
+,   `data`       BLOB
 ,   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 );

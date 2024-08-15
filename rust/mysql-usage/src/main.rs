@@ -16,6 +16,7 @@ struct Person {
     age: Option<i32>,
     hash: Option<String>,
     _available: bool,
+    data: Option<Vec<u8>>,
     _created_at: Option<PrimitiveDateTime>,
 }
 
@@ -27,20 +28,22 @@ impl Person {
             age,
             hash: None,
             _available: true,
+            data: Some(vec![1, 2, 4, 8, 16]),
             _created_at: None,
         }
     }
 }
 
 impl FromRow for Person {
-    fn from_row_opt(mut row: Row) -> core::result::Result<Self, FromRowError> {
+    fn from_row_opt(row: Row) -> core::result::Result<Self, FromRowError> {
         Ok(Person {
-            _id: row.take(0).unwrap(),
-            name: row.take(1).unwrap(),
-            age: row.take(2).unwrap(),
-            hash: row.take(3).unwrap(),
-            _available: row.take(4).unwrap(),
-            _created_at: row.take(5),
+            _id: row.get(0).unwrap(),
+            name: row.get(1).unwrap(),
+            age: row.get(2).unwrap(),
+            hash: row.get(3).unwrap(),
+            _available: row.get(4).unwrap(),
+            data: row.get(5),
+            _created_at: row.get(6),
         })
     }
 }
@@ -76,18 +79,19 @@ async fn main() -> Result<()> {
         .db_name(Some("example"))
         .into();
 
-    let pool = mysql_async::Pool::new::<Opts>(opts);
+    let pool = Pool::new::<Opts>(opts);
     let mut conn = pool.get_conn().await?;
 
     "DELETE FROM people"
         .ignore(&mut conn)
         .await?;
 
-    "INSERT INTO people (name, age, hash) VALUES (:name, :age, :hash)"
+    "INSERT INTO people (name, age, hash, data) VALUES (:name, :age, :hash, :data)"
         .with(people.iter().map(|person| params! {
             "name" => person.name.as_str(),
             "age" => person.age,
             "hash" => person.hash.as_ref(),
+            "data" => person.data.as_ref(),
         }))
         .batch(&mut conn)
         .await?;
