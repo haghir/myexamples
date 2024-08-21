@@ -1,5 +1,7 @@
+use std::cell::RefCell;
+use std::ops::DerefMut;
 use futures_util::StreamExt;
-use mysql_async::{FromRowError, FromValueError, Opts, OptsBuilder, Pool, Result, Row, Value};
+use mysql_async::{Conn, FromRowError, FromValueError, Opts, OptsBuilder, Pool, Result, Row, Value};
 use mysql_async::prelude::*;
 use sha2::{Sha256, Digest};
 use time::PrimitiveDateTime;
@@ -11,13 +13,13 @@ pub(crate) enum Gender {
     Others,
 }
 
-impl Into<Value> for Gender {
-    fn into(self) -> Value {
-        Value::from(match self {
-            Self::Male => Value::Int(0),
-            Self::Female => Value::Int(1),
-            Self::Others => Value::Int(2),
-        })
+impl From<Gender> for Value {
+    fn from(value: Gender) -> Self {
+        match value {
+            Gender::Male => Value::Int(0),
+            Gender::Female => Value::Int(1),
+            Gender::Others => Value::Int(2),
+        }
     }
 }
 
@@ -93,10 +95,13 @@ fn set_hash(person: &mut Person) {
     person.hash = Some(hex::encode(hasher.finalize()).to_string());
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    env_logger::init();
+async fn delete(conn: &RefCell<Conn>) -> Result<()> {
+    "DELETE FROM people"
+        .ignore(conn.borrow_mut().deref_mut())
+        .await
+}
 
+async fn insert(conn: &RefCell<Conn>) -> Result<()> {
     let mut people = vec! [
         Person::new("Alice", Some(14), Gender::Female),
         Person::new("Bobby", None, Gender::Male),
@@ -107,21 +112,6 @@ async fn main() -> Result<()> {
         set_hash(person);
     }
 
-    let opts = OptsBuilder::default()
-        .ip_or_hostname("127.0.0.1")
-        .tcp_port(3306)
-        .user(Some("example"))
-        .pass(Some("example"))
-        .db_name(Some("example"))
-        .into();
-
-    let pool = Pool::new::<Opts>(opts);
-    let mut conn = pool.get_conn().await?;
-
-    "DELETE FROM people"
-        .ignore(&mut conn)
-        .await?;
-
     "INSERT INTO people (name, age, gender, hash, data) VALUES (:name, :age, :gender, :hash, :data)"
         .with(people.iter().map(|person| params! {
             "name" => person.name.as_str(),
@@ -130,9 +120,11 @@ async fn main() -> Result<()> {
             "hash" => person.hash.as_ref(),
             "data" => person.data.as_ref(),
         }))
-        .batch(&mut conn)
-        .await?;
+        .batch(conn.borrow_mut().deref_mut())
+        .await
+}
 
+async fn select(conn: &RefCell<Conn>) -> Result<()> {
     let query = r#"SELECT
         id
     ,   name
@@ -150,13 +142,37 @@ async fn main() -> Result<()> {
         "name" => "%i%"
     });
 
-    let mut result = query.run(&mut conn).await?;
+    let mut ref_conn = conn.borrow_mut();
+    let deref_conn = ref_conn.deref_mut();
+    let mut result = query.run(deref_conn).await?;
     if let Some(mut stream) = result.stream().await? {
         while let Some(found) = stream.next().await {
             let found: Person = found?;
             println!("{:?}", found);
         }
     }
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    env_logger::init();
+
+    let opts = OptsBuilder::default()
+        .ip_or_hostname("127.0.0.1")
+        .tcp_port(3306)
+        .user(Some("example"))
+        .pass(Some("example"))
+        .db_name(Some("example"))
+        .into();
+
+    let pool = Pool::new::<Opts>(opts);
+    let conn = RefCell::new(pool.get_conn().await?);
+
+    delete(&conn).await?;
+    insert(&conn).await?;
+    select(&conn).await?;
 
     drop(conn);
     pool.disconnect().await?;
