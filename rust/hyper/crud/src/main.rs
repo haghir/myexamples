@@ -22,6 +22,7 @@ type DynError = Box<dyn std::error::Error + Send + Sync>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Record {
+    id: usize,
     name: String,
     age: u8,
 }
@@ -51,7 +52,7 @@ async fn new(tera: &Arc<Mutex<Tera>>) -> Result<Response<Full<Bytes>>, DynError>
     let ctx = Context::new();
     let tera = tera.lock().await;
 
-    let view = tera.render("index.html", &ctx)?;
+    let view = tera.render("new.html", &ctx)?;
 
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -66,8 +67,10 @@ async fn create(
 
     let bytes = req.collect().await?.to_bytes();
     let params: HashMap<String, String> = form_urlencoded::parse(&bytes).into_owned().collect();
+    let id = table.len();
 
     table.push(Record {
+        id,
         name: params.get("name").unwrap().clone(),
         age: params.get("age").unwrap().parse().unwrap(),
     });
@@ -94,7 +97,6 @@ async fn edit(
     let record = table.get(id).unwrap();
 
     let mut ctx = Context::new();
-    ctx.insert("id", &id);
     ctx.insert("record", &record);
     let view = tera.render("edit.html", &ctx)?;
 

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>CRUD example</title>
+</head>
+<body>
+  <form action="/update" method="post">
+    <label for="name">name:</label>
+    <input type="text" id="name" name="name" value="{{ record.name }}"/><br />
+    <label for="age">age:</label>
+    <input type="number" id="age" name="age" value="{{ record.age }}" />
+    <input type="hidden" name="id" value="{{ record.id }}" />
+    <button type="submit">Update</button>
+  </form>
+</body>
+</html>
