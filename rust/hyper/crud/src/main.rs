@@ -176,7 +176,7 @@ impl Service<Request<Incoming>> for MyService {
                 (&Method::GET, "/edit") => edit(req, &tera, &table).await,
                 (&Method::POST, "/update") => update(req, &table).await,
                 (&Method::GET, "/show") => show(req, &tera, &table).await,
-                _ => Err("Something went wrong".into()),
+                (method, path) => Err(format!("Illegal request ({} {})", method, path).into()),
             }
         })
     }
