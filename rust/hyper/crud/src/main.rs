@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use http_body_util::Full;
+use http_body_util::{BodyExt, Full};
 use hyper::{
     body::Incoming, header::LOCATION, server::conn::http1, service::Service, Method, Request,
     Response, StatusCode,
@@ -7,14 +7,12 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use log::error;
 use serde::{Deserialize, Serialize};
-use std::{
-    future::Future,
-    net::SocketAddr,
-    pin::Pin,
-    sync::{Arc, Mutex, RwLock},
-};
+use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tera::{Context, Tera};
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    sync::{Mutex, RwLock},
+};
 
 type DynError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -24,10 +22,8 @@ type DynError = Box<dyn std::error::Error + Send + Sync>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Record {
-    id: u64,
     name: String,
     age: u8,
-    dropped: bool,
 }
 
 // ===================================================================
@@ -38,17 +34,12 @@ async fn index(
     tera: &Arc<Mutex<Tera>>,
     table: &Arc<RwLock<Vec<Record>>>,
 ) -> Result<Response<Full<Bytes>>, DynError> {
-    let mut ctx = Context::new();
-    let tera = match tera.lock() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
-    let table = match table.read() {
-        Ok(value) => value.to_vec(),
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let tera = tera.lock().await;
+    let table = table.read().await;
+    let table_ref: &Vec<Record> = table.as_ref();
 
-    ctx.insert("table", &table);
+    let mut ctx = Context::new();
+    ctx.insert("table", table_ref);
     let view = tera.render("index.html", &ctx)?;
 
     Ok(Response::builder()
@@ -56,21 +47,10 @@ async fn index(
         .body(view.into_bytes().into())?)
 }
 
-async fn new(
-    tera: &Arc<Mutex<Tera>>,
-    table: &Arc<RwLock<Vec<Record>>>,
-) -> Result<Response<Full<Bytes>>, DynError> {
-    let mut ctx = Context::new();
-    let tera = match tera.lock() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
-    let table = match table.read() {
-        Ok(value) => value.to_vec(),
-        Err(_) => return Err("Something went wrong".into()),
-    };
+async fn new(tera: &Arc<Mutex<Tera>>) -> Result<Response<Full<Bytes>>, DynError> {
+    let ctx = Context::new();
+    let tera = tera.lock().await;
 
-    ctx.insert("table", &table);
     let view = tera.render("index.html", &ctx)?;
 
     Ok(Response::builder()
@@ -82,10 +62,15 @@ async fn create(
     req: Request<Incoming>,
     table: &Arc<RwLock<Vec<Record>>>,
 ) -> Result<Response<Full<Bytes>>, DynError> {
-    let table = match table.write() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let mut table = table.write().await;
+
+    let bytes = req.collect().await?.to_bytes();
+    let params: HashMap<String, String> = form_urlencoded::parse(&bytes).into_owned().collect();
+
+    table.push(Record {
+        name: params.get("name").unwrap().clone(),
+        age: params.get("age").unwrap().parse().unwrap(),
+    });
 
     Ok(Response::builder()
         .status(StatusCode::FOUND)
@@ -98,17 +83,19 @@ async fn edit(
     tera: &Arc<Mutex<Tera>>,
     table: &Arc<RwLock<Vec<Record>>>,
 ) -> Result<Response<Full<Bytes>>, DynError> {
-    let mut ctx = Context::new();
-    let tera = match tera.lock() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
-    let table = match table.read() {
-        Ok(value) => value.to_vec(),
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let tera = tera.lock().await;
+    let table = table.read().await;
 
-    ctx.insert("table", &table);
+    let query = req.uri().query().unwrap();
+    let params: HashMap<String, String> = form_urlencoded::parse(query.as_bytes())
+        .into_owned()
+        .collect();
+    let id: usize = params.get("id").unwrap().parse().unwrap();
+    let record = table.get(id).unwrap();
+
+    let mut ctx = Context::new();
+    ctx.insert("id", &id);
+    ctx.insert("record", &record);
     let view = tera.render("edit.html", &ctx)?;
 
     Ok(Response::builder()
@@ -120,48 +107,15 @@ async fn update(
     req: Request<Incoming>,
     table: &Arc<RwLock<Vec<Record>>>,
 ) -> Result<Response<Full<Bytes>>, DynError> {
-    let table = match table.write() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let mut table = table.write().await;
 
-    Ok(Response::builder()
-        .status(StatusCode::FOUND)
-        .header(LOCATION, "/")
-        .body("".into())?)
-}
+    let bytes = req.collect().await?.to_bytes();
+    let params: HashMap<String, String> = form_urlencoded::parse(&bytes).into_owned().collect();
+    let id: usize = params.get("id").unwrap().parse().unwrap();
 
-async fn drop(
-    req: Request<Incoming>,
-    tera: &Arc<Mutex<Tera>>,
-    table: &Arc<RwLock<Vec<Record>>>,
-) -> Result<Response<Full<Bytes>>, DynError> {
-    let mut ctx = Context::new();
-    let tera = match tera.lock() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
-    let table = match table.read() {
-        Ok(value) => value.to_vec(),
-        Err(_) => return Err("Something went wrong".into()),
-    };
-
-    ctx.insert("table", &table);
-    let view = tera.render("drop.html", &ctx)?;
-
-    Ok(Response::builder()
-        .status(StatusCode::OK)
-        .body(view.into_bytes().into())?)
-}
-
-async fn delete(
-    req: Request<Incoming>,
-    table: &Arc<RwLock<Vec<Record>>>,
-) -> Result<Response<Full<Bytes>>, DynError> {
-    let table = match table.write() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let record = table.get_mut(id).unwrap();
+    record.name = params.get("name").unwrap().clone();
+    record.age = params.get("age").unwrap().parse().unwrap();
 
     Ok(Response::builder()
         .status(StatusCode::FOUND)
@@ -174,17 +128,18 @@ async fn show(
     tera: &Arc<Mutex<Tera>>,
     table: &Arc<RwLock<Vec<Record>>>,
 ) -> Result<Response<Full<Bytes>>, DynError> {
-    let mut ctx = Context::new();
-    let tera = match tera.lock() {
-        Ok(value) => value,
-        Err(_) => return Err("Something went wrong".into()),
-    };
-    let table = match table.read() {
-        Ok(value) => value.to_vec(),
-        Err(_) => return Err("Something went wrong".into()),
-    };
+    let tera = tera.lock().await;
+    let table = table.read().await;
 
-    ctx.insert("table", &table);
+    let query = req.uri().query().unwrap();
+    let params: HashMap<String, String> = form_urlencoded::parse(query.as_bytes())
+        .into_owned()
+        .collect();
+    let id: usize = params.get("id").unwrap().parse().unwrap();
+    let record = table.get(id).unwrap();
+
+    let mut ctx = Context::new();
+    ctx.insert("record", &record);
     let view = tera.render("show.html", &ctx)?;
 
     Ok(Response::builder()
@@ -210,15 +165,14 @@ impl Service<Request<Incoming>> for MyService {
     fn call(&self, req: Request<Incoming>) -> Self::Future {
         let tera = Arc::clone(&self.tera);
         let table = Arc::clone(&self.table);
+
         Box::pin(async move {
             match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => index(&tera, &table).await,
-                (&Method::GET, "/new") => new(&tera, &table).await,
+                (&Method::GET, "/new") => new(&tera).await,
                 (&Method::POST, "/create") => create(req, &table).await,
                 (&Method::GET, "/edit") => edit(req, &tera, &table).await,
                 (&Method::POST, "/update") => update(req, &table).await,
-                (&Method::GET, "/drop") => drop(req, &tera, &table).await,
-                (&Method::DELETE, "/delete") => delete(req, &table).await,
                 (&Method::GET, "/show") => show(req, &tera, &table).await,
                 _ => Err("Something went wrong".into()),
             }
