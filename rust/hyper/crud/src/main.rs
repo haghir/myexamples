@@ -1,11 +1,11 @@
 use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{
-    body::Incoming, header::LOCATION, server::conn::http1, service::Service, Method, Request,
-    Response, StatusCode,
+    body::Incoming, header, server::conn::http1, service::Service, Method, Request, Response,
+    StatusCode,
 };
 use hyper_util::rt::TokioIo;
-use log::error;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tera::{Context, Tera};
@@ -25,6 +25,11 @@ struct Record {
     id: usize,
     name: String,
     age: u8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct RequestJson {
+    id: usize,
 }
 
 // ===================================================================
@@ -77,7 +82,7 @@ async fn create(
 
     Ok(Response::builder()
         .status(StatusCode::FOUND)
-        .header(LOCATION, "/")
+        .header(header::LOCATION, "/")
         .body("".into())?)
 }
 
@@ -121,7 +126,7 @@ async fn update(
 
     Ok(Response::builder()
         .status(StatusCode::FOUND)
-        .header(LOCATION, "/")
+        .header(header::LOCATION, "/")
         .body("".into())?)
 }
 
@@ -149,6 +154,23 @@ async fn show(
         .body(view.into_bytes().into())?)
 }
 
+async fn json(
+    req: Request<Incoming>,
+    table: &Arc<RwLock<Vec<Record>>>,
+) -> Result<Response<Full<Bytes>>, DynError> {
+    let table = table.read().await;
+    let body = req.collect().await?.to_bytes().to_vec();
+    let body = body.as_slice();
+    let reqjson: RequestJson = serde_json::from_slice(body)?;
+    let record = &table[reqjson.id];
+    let resjson = serde_json::to_string(record)?;
+
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(resjson.into_bytes().into())?)
+}
+
 // ===================================================================
 // Service
 // ===================================================================
@@ -169,13 +191,17 @@ impl Service<Request<Incoming>> for MyService {
         let table = Arc::clone(&self.table);
 
         Box::pin(async move {
-            match (req.method(), req.uri().path()) {
+            let method = req.method();
+            let path = req.uri().path();
+            info!("{} {}", method, path);
+            match (method, path) {
                 (&Method::GET, "/") => index(&tera, &table).await,
                 (&Method::GET, "/new") => new(&tera).await,
                 (&Method::POST, "/create") => create(req, &table).await,
                 (&Method::GET, "/edit") => edit(req, &tera, &table).await,
                 (&Method::POST, "/update") => update(req, &table).await,
                 (&Method::GET, "/show") => show(req, &tera, &table).await,
+                (&Method::POST, "/json") => json(req, &table).await,
                 (method, path) => Err(format!("Illegal request ({} {})", method, path).into()),
             }
         })
