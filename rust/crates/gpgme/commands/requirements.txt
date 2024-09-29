@@ -1,0 +1,5 @@
+The followings are required on Ubuntu.
+
+pkg-config
+libgpg-error-dev
+libgpgme-dev
