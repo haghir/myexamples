@@ -7,7 +7,9 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
+use std::{
+    collections::HashMap, future::Future, net::SocketAddr, pin::Pin, str::FromStr, sync::Arc,
+};
 use tera::{Context, Tera};
 use tokio::{
     net::TcpListener,
@@ -216,7 +218,7 @@ impl Service<Request<Incoming>> for MyService {
 async fn main() -> Result<(), DynError> {
     env_logger::init();
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from_str("[::1]:3000")?;
     let listener = TcpListener::bind(addr).await?;
     let tera = Arc::new(Mutex::new(Tera::new("html/**/*")?));
     let table = Arc::new(RwLock::new(Vec::new()));
